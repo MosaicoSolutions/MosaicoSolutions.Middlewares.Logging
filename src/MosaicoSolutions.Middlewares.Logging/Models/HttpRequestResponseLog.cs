@@ -7,7 +7,7 @@ namespace MosaicoSolutions.Middlewares.Logging.Models
 {
     public class HttpRequestResponseLog
     {
-        public string Uri { get; set; }
+        public string Url { get; set; }
         public string Method { get; set; }
         public string Scheme { get; set; }
         public string Host { get; set; }

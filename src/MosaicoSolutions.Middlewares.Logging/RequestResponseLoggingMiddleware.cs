@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.IO;
 using MosaicoSolutions.Middlewares.Logging.Models;
+using MosaicoSolutions.Middlewares.Logging.Options;
 
 namespace MosaicoSolutions.Middlewares.Logging
 {
@@ -26,7 +27,7 @@ namespace MosaicoSolutions.Middlewares.Logging
             _recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
         }
 
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, RequestResponseLoggingOptions options)
         {
             var request = context.Request;
 
@@ -38,7 +39,7 @@ namespace MosaicoSolutions.Middlewares.Logging
                 Port = request.Host.Port,
                 Path = request.Path.ToString(),
                 QueryString = request.QueryString.ToString(),
-                Uri = request.GetDisplayUrl(),
+                Url = request.GetDisplayUrl(),
                 Method = request.Method,
                 RequestHeaders = request.Headers,
                 RequestBody = await GetRequestBody(request)
@@ -59,6 +60,11 @@ namespace MosaicoSolutions.Middlewares.Logging
             httpRequestLog.ResponseBody = ReadStreamInChunks(newResponseBody);
             httpRequestLog.ResponseTime = DateTimeOffset.UtcNow;
             httpRequestLog.ResponseHeaders = context.Response.Headers;
+
+            options?.OnComplete?.Invoke(null, new Events.RequestResponseLoggingEventArgs
+            {
+                RequestResponseLog = httpRequestLog
+            });
         }
 
         public async Task<string> GetRequestBody(HttpRequest request)
