@@ -1,12 +1,14 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Options;
 using Microsoft.IO;
 using MosaicoSolutions.Middlewares.Logging.Models;
-using MosaicoSolutions.Middlewares.Logging.Options;
 
 namespace MosaicoSolutions.Middlewares.Logging
 {
@@ -20,14 +22,16 @@ namespace MosaicoSolutions.Middlewares.Logging
         private const int ReadChunkBufferLength = 4096;
         private readonly RequestDelegate _next;
         private readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager;
+        private readonly RequestResponseLoggingOptions? _options;
 
-        public RequestResponseLoggingMiddleware(RequestDelegate next)
+        public RequestResponseLoggingMiddleware(RequestDelegate next, IOptions<RequestResponseLoggingOptions> options)
         {
             _next = next;
+            _options = options.Value;
             _recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
         }
 
-        public async Task Invoke(HttpContext context, RequestResponseLoggingOptions options)
+        public async Task Invoke(HttpContext context)
         {
             var request = context.Request;
 
@@ -60,11 +64,8 @@ namespace MosaicoSolutions.Middlewares.Logging
             httpRequestLog.ResponseBody = ReadStreamInChunks(newResponseBody);
             httpRequestLog.ResponseTime = DateTimeOffset.UtcNow;
             httpRequestLog.ResponseHeaders = context.Response.Headers;
-
-            options?.OnComplete?.Invoke(null, new Events.RequestResponseLoggingEventArgs
-            {
-                RequestResponseLog = httpRequestLog
-            });
+            
+            OnComplete(httpRequestLog);
         }
 
         public async Task<string> GetRequestBody(HttpRequest request)
@@ -99,11 +100,25 @@ namespace MosaicoSolutions.Middlewares.Logging
 
             return result;
         }
+
+        private void OnComplete(HttpRequestResponseLog httpRequestLog)
+        {
+            if (_options is null || _options.HandlerType is null) return;
+
+            var handlerTypeInstance = Activator.CreateInstance(_options.HandlerType);
+            var handleMethod = _options.HandlerType
+                                       .GetMethods()
+                                       .Where(m => m.GetParameters().Any(p => p.ParameterType == typeof(HttpRequestResponseLog)))
+                                       .FirstOrDefault();
+
+            var task = (Task?)handleMethod?.Invoke(handlerTypeInstance, new [] { httpRequestLog });
+            task?.Wait();
+        }
     }
 
     public static class RequestResponseLoggingMiddlewareExtensions
     {
-        public static IApplicationBuilder UseRequestResponseLoggingMiddleware(this IApplicationBuilder builder)
+        public static IApplicationBuilder UseRequestResponseLogging(this IApplicationBuilder builder)
             => builder.UseMiddleware<RequestResponseLoggingMiddleware>();
     }
 }

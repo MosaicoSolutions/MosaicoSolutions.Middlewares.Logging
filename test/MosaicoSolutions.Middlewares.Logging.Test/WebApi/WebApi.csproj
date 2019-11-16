@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\MosaicoSolutions.Middlewares.Logging\MosaicoSolutions.Middlewares.Logging.csproj" />
   </ItemGroup>
 
 </Project>
