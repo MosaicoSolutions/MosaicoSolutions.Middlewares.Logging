@@ -13,11 +13,9 @@ namespace WebApi
                 Console.WriteLine($"{nameof(log.RequestTime)}[{log.RequestTime}]");
                 Console.WriteLine($"RequestTime.LocalDateTime[{log.RequestTime.LocalDateTime}]");
                 Console.WriteLine($"{nameof(log.Scheme)}[{log.Scheme}]");
-                Console.WriteLine($"{nameof(log.Host)}[{log.Host}]");
-                Console.WriteLine($"{nameof(log.Port)}[{log.Port}]");
+                Console.WriteLine($"{nameof(log.Host)}[{log.Host.ToString()}]");
                 Console.WriteLine($"{nameof(log.Path)}[{log.Path}]");
                 Console.WriteLine($"{nameof(log.QueryString)}[{log.QueryString}]");
-                Console.WriteLine($"{nameof(log.Url)}[{log.Url}]");
                 Console.WriteLine($"{nameof(log.ResponseTime)}[{log.ResponseTime}]");
                 Console.WriteLine($"ResponseTime.LocalDateTime[{log.ResponseTime.LocalDateTime}]");
             });
