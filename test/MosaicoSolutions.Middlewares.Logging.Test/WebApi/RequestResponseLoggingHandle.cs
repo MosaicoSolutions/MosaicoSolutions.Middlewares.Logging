@@ -1,10 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using MosaicoSolutions.Middlewares.Logging.Models;
+using MosaicoSolutions.Middlewares.Logging.Services.Interfaces;
 
 namespace WebApi
 {
-    public class RequestResponseLoggingHandle
+    public class RequestResponseLoggingHandleAsync : IAsyncRequestResponseLogHandle
     {
         public Task HandleAsync(HttpRequestResponseLog log)
             => Task.Run(() => 
