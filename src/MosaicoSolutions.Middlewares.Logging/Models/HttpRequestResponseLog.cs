@@ -19,7 +19,7 @@ namespace MosaicoSolutions.Middlewares.Logging.Models
         public  bool IsHttps { get; internal set; }
         public IReadOnlyDictionary<string, object>? RouteValues { get; internal set; }
         public  HostString Host { get; internal set; }
-        public  bool HasFormContentType { get; }
+        public  bool HasFormContentType { get; internal set; }
         public  IFormCollection? Form { get; internal set; }
         public  IRequestCookieCollection? RequestCookies { get; internal set; }
         public  string? RequestContentType { get; internal set; }

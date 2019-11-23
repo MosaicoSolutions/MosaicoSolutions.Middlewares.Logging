@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MosaicoSolutions.Middlewares.Logging;
+using MosaicoSolutions.Middlewares.Logging.Services;
 
 namespace WebApi
 {
@@ -26,11 +27,7 @@ namespace WebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<RequestResponseLoggingOptions>(options => 
-            {
-                options.HandlerType = typeof(RequestResponseLoggingHandle);
-            });
-
+            services.AddAsyncRequestResponseLogHandleScoped<RequestResponseLoggingHandle>();
             services.AddControllers();
         }
 

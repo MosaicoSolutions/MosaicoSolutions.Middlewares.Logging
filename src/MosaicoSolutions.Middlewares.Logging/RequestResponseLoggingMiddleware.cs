@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IO;
 using MosaicoSolutions.Middlewares.Logging.Models;
+using MosaicoSolutions.Middlewares.Logging.Services.Interfaces;
 
 namespace MosaicoSolutions.Middlewares.Logging
 {
@@ -25,13 +26,13 @@ namespace MosaicoSolutions.Middlewares.Logging
         private const int ReadChunkBufferLength = 4096;
         private readonly RequestDelegate _next;
         private readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager;
-        private readonly RequestResponseLoggingOptions? _options;
+        private RequestResponseLoggingOptions? _options;
 
         public RequestResponseLoggingMiddleware(RequestDelegate next, IOptions<RequestResponseLoggingOptions> options)
         {
             _next = next;
-            _options = options.Value;
             _recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
+            _options = options?.Value;
         }
 
         public async Task Invoke(HttpContext context)
@@ -41,7 +42,8 @@ namespace MosaicoSolutions.Middlewares.Logging
             var httpRequestLog = new HttpRequestResponseLog
             {
                 RequestTime = DateTimeOffset.UtcNow,
-                Form = request.Form,
+                HasFormContentType = request.HasFormContentType,
+                Form = request.HasFormContentType ? request.Form : null,
                 Host = request.Host,
                 IsHttps = request.IsHttps,
                 Method = request.Method,
@@ -56,7 +58,7 @@ namespace MosaicoSolutions.Middlewares.Logging
                 RequestHeaders = GetHeaders(request.Headers),
                 RouteValues = request.RouteValues,
                 Scheme = request.Scheme,
-                RequestBody = await GetRequestBody(request)
+                RequestBody = await GetRequestBody(request),
             };
 
             var originalBodyStream = context.Response.Body;
@@ -78,7 +80,7 @@ namespace MosaicoSolutions.Middlewares.Logging
             httpRequestLog.ResponseContentType = context.Response.ContentType;
             httpRequestLog.ResponseCookies = context.Response.Cookies;
             
-            OnComplete(httpRequestLog);
+            await OnComplete(httpRequestLog, context);
         }
 
         private IReadOnlyDictionary<string, StringValues> GetHeaders(IHeaderDictionary headerDictionary)
@@ -117,19 +119,19 @@ namespace MosaicoSolutions.Middlewares.Logging
             return result;
         }
 
-        private void OnComplete(HttpRequestResponseLog httpRequestLog)
+        private async Task OnComplete(HttpRequestResponseLog httpRequestLog, HttpContext context)
         {
-            if (_options is null || _options.HandlerType is null) return;
+            var iAsyncRequestResponseLogHandle = (IAsyncRequestResponseLogHandle)context.RequestServices.GetService(typeof(IAsyncRequestResponseLogHandle));
+            var iRequestResponseLogHandle = (IRequestResponseLogHandle)context.RequestServices.GetService(typeof(IRequestResponseLogHandle));
 
-            var handlerTypeInstance = Activator.CreateInstance(_options.HandlerType);
-            var handleMethod = _options.HandlerType
-                                       .GetMethods()
-                                       .Where(m => m.GetParameters().Any(p => p.ParameterType == typeof(HttpRequestResponseLog)) &&
-                                                   _options.AcceptHandleMethodNames.Any(n => n == m.Name))
-                                       .FirstOrDefault();
-
-            var task = (Task?)handleMethod?.Invoke(handlerTypeInstance, new [] { httpRequestLog });
-            task?.Wait();
+            if (iAsyncRequestResponseLogHandle != null)
+            {
+                await iAsyncRequestResponseLogHandle.HandleAsync(httpRequestLog);
+            } 
+            else if(iRequestResponseLogHandle != null) 
+            {
+                iRequestResponseLogHandle.Handle(httpRequestLog);
+            }
         }
     }
 
